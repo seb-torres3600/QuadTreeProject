@@ -1,0 +1,47 @@
+version: '1'
+services:
+  service1:
+    build:
+      context: ./PostGresQuadTreeData
+      dockerfile: Dockerfile
+    container_name: quaddatabase
+    networks:
+      - my_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datauser -d quadtreedatabase"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  service2:
+    build:
+      context: ./QuadTreeAPI
+      dockerfile: Dockerfile
+    container_name: quadtreeAPI
+    networks:
+      - my_network
+    environment:
+      DATABASE_HOST: quaddatabase
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      service1:
+        condition: service_healthy    
+
+  service3:
+    build:
+      context: ./QuadTreeDevice
+      dockerfile: Dockerfile
+    container_name: quadtreedevice
+    networks:
+      - my_network
+    depends_on:
+      service2:
+        condition: service_healthy  
+
+networks:
+  my_network:
+    driver: bridge
